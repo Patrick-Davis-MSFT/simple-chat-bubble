@@ -88,6 +88,19 @@ Set required azd environment values:
 azd env new production
 azd env set AZURE_LOCATION eastus
 azd env set AIHORDE_API_KEY "your_ai_horde_key"
+azd env set APP_SERVICE_SKU_NAME "F1"
+```
+
+`APP_SERVICE_SKU_NAME` supports:
+
+- `F1` (Free)
+- `B3` (Basic)
+
+Example to switch to Basic B3:
+
+```bash
+azd env set APP_SERVICE_SKU_NAME "B3"
+azd provision
 ```
 
 Preview and deploy:
@@ -164,4 +177,4 @@ This allows `azure/login` to use workload identity federation against the manage
 
 ## Important Azure Note
 
-This template targets App Service Plan `F1` and Python `3.13` as requested. In some regions or configurations, Python on Linux App Service may require a paid SKU. If deployment validation reports SKU/runtime incompatibility, switch `infra/main.bicep` to `B1`.
+This template defaults to App Service Plan `F1` and Python `3.13`. If you need a paid plan, set `APP_SERVICE_SKU_NAME` to `B3` and re-run `azd provision`.
