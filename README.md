@@ -110,16 +110,57 @@ Workflow file:
 
 - `.github/workflows/production-cicd.yml`
 
-Required GitHub Secrets:
+The production workflow is intentionally disabled by default. To enable it, set GitHub repository or environment variable `ENABLE_PRODUCTION_CICD` to `true`.
 
-- `AZURE_CLIENT_ID`
-- `AZURE_TENANT_ID`
-- `AZURE_SUBSCRIPTION_ID`
+Required GitHub Secrets:
 - `AIHORDE_API_KEY`
 
 Optional GitHub Variables:
 
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
 - `AZURE_LOCATION` (defaults to `eastus` in workflow)
+
+### GitHub OIDC with User Assigned Managed Identity (no app registration)
+
+The Bicep template now creates a deployment User Assigned Managed Identity and, when configured, a GitHub OIDC federated credential.
+
+Set these azd environment values before provisioning so the federated credential can be created with your repository details:
+
+```bash
+azd env config set infra.parameters.githubOrg "<your-github-org-or-user>"
+azd env config set infra.parameters.githubRepo "<your-repo-name>"
+azd env config set infra.parameters.githubBranch "main"
+```
+
+Provision once (or re-provision) to create the identity and federated credential:
+
+```bash
+azd provision
+```
+
+Grant the managed identity deployment permissions once (run as an owner/admin):
+
+```bash
+RG_ID=$(az group show -n "$(azd env get-value AZURE_RESOURCE_GROUP)" --query id -o tsv)
+MI_PRINCIPAL_ID=$(azd env get-value GITHUB_DEPLOY_MANAGED_IDENTITY_PRINCIPAL_ID)
+az role assignment create --assignee-object-id "$MI_PRINCIPAL_ID" --assignee-principal-type ServicePrincipal --role Contributor --scope "$RG_ID"
+```
+
+Get identity outputs:
+
+```bash
+azd env get-values | grep GITHUB_DEPLOY_MANAGED_IDENTITY
+```
+
+Add these as repository or environment variables in GitHub Actions:
+
+- `AZURE_CLIENT_ID` = `GITHUB_DEPLOY_MANAGED_IDENTITY_CLIENT_ID`
+- `AZURE_TENANT_ID` = your Azure tenant ID
+- `AZURE_SUBSCRIPTION_ID` = your Azure subscription ID
+
+This allows `azure/login` to use workload identity federation against the managed identity, avoiding a separate service principal/app registration for CI/CD.
 
 ## Important Azure Note
 
