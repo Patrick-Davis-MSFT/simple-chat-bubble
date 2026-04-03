@@ -91,6 +91,17 @@ azd env set AIHORDE_API_KEY "your_ai_horde_key"
 azd env set APP_SERVICE_SKU_NAME "F1"
 ```
 
+`AIHORDE_MODEL` is initialized by the first `azd provision` via Bicep output, with default:
+
+- `koboldcpp/LFM2.5-1.2B-Instruct`
+
+To override it manually:
+
+```bash
+azd env set AIHORDE_MODEL "your-preferred-model"
+azd provision
+```
+
 `APP_SERVICE_SKU_NAME` supports:
 
 - `F1` (Free)

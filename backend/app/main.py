@@ -91,7 +91,8 @@ def health() -> dict[str, str]:
 def chat(request: ChatRequest) -> ChatResponse:
     try:
         client = _build_client()
-        model = os.getenv("AIHORDE_MODEL", "openai/gpt-oss-20b")
+        configured_model = os.getenv("AIHORDE_MODEL")
+        model = configured_model.strip() if configured_model and configured_model.strip().lower() != "none" else "openai/gpt-oss-20b"
         system_prompt = _load_agent_prompt()
 
         outbound_messages = [{"role": "system", "content": system_prompt}]
