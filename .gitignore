@@ -148,3 +148,5 @@ dist
 
 /backend/tests/__pycache__
 /backend/tests/__pycache__
+/backend/tests/__pycache__
+*.pyc
