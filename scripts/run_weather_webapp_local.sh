@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 
 # Optional first argument: explicit AZD .env path.
-# Example: ./scripts/run_weather_function_local.sh .azure/bubble-chat/.env
+# Example: ./scripts/run_weather_webapp_local.sh .azure/bubble-chat/.env
 source "$script_dir/load_azd_env.sh" "${1:-}"
 
 cd "$repo_root/function"
@@ -43,7 +43,7 @@ ensure_python_tooling() {
 ensure_python_tooling
 
 if [[ ! -x .venv/bin/python ]]; then
-  echo "Creating function virtual environment..."
+  echo "Creating weather webapp virtual environment..."
   python3 -m venv .venv
 fi
 
@@ -54,40 +54,16 @@ if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
 fi
 
 if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
-  echo "Error: pip is unavailable in function virtual environment." >&2
-  echo "Try installing python venv/pip support in the container and retry." >&2
+  echo "Error: pip is unavailable in weather webapp virtual environment." >&2
   exit 1
 fi
 
-if ! "$PYTHON_BIN" -c "import azure.functions" >/dev/null 2>&1; then
-  echo "Installing function dependencies..."
+if ! "$PYTHON_BIN" -c "import flask, gunicorn" >/dev/null 2>&1; then
+  echo "Installing weather webapp dependencies..."
   "$PYTHON_BIN" -m pip install -r requirements.txt
 fi
 
 export PATH="$(pwd)/.venv/bin:$PATH"
 
-if ! command -v func >/dev/null 2>&1; then
-  if ! command -v sudo >/dev/null 2>&1; then
-    echo "Error: Azure Functions Core Tools (func) is not installed and sudo is unavailable." >&2
-    exit 1
-  fi
-
-  echo "Installing Azure Functions Core Tools..."
-  sudo apt-get update -y
-  sudo apt-get install -y azure-functions-core-tools-4
-fi
-
-if ! command -v func >/dev/null 2>&1; then
-  echo "Error: Azure Functions Core Tools installation did not add 'func' to PATH." >&2
-  exit 1
-fi
-
-if [[ ! -f local.settings.json && -f local.settings.sample.json ]]; then
-  cp local.settings.sample.json local.settings.json
-fi
-
-export FUNCTIONS_WORKER_RUNTIME="${FUNCTIONS_WORKER_RUNTIME:-python}"
-export AzureWebJobsStorage="${AzureWebJobsStorage:-UseDevelopmentStorage=true}"
-
-echo "Starting Weather Function app on http://localhost:${WEATHER_FUNC_PORT:-7071}"
-exec func start --port "${WEATHER_FUNC_PORT:-7071}"
+echo "Starting Weather MCP Flask app on http://localhost:${WEATHER_WEBAPP_PORT:-7071}"
+exec "$PYTHON_BIN" -m gunicorn --bind "0.0.0.0:${WEATHER_WEBAPP_PORT:-7071}" function_app:app
