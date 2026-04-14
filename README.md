@@ -83,6 +83,43 @@ The agent is defined in:
 
 The backend reads this file and injects it as the system prompt for every chat completion.
 
+## Testing Weather Flow With trace_weather_calls.py
+
+Use `scripts/trace_weather_calls.py` to validate the weather tool path exactly like the chat bubble/agent flow.
+
+The script calls only these Weather WebApp endpoints:
+
+- `GET /api/weather`
+- `POST /api/mcp` with `tools/call` for `get_weather_forecast`
+
+Run against a deployed Weather WebApp:
+
+```bash
+python3 ./scripts/trace_weather_calls.py \
+	--weather-webapp-uri "https://your-weather-webapp.azurewebsites.net" \
+	--city "Chicago" \
+	--state "IL" \
+	--days 3
+```
+
+Run against a local Weather WebApp:
+
+```bash
+python3 ./scripts/trace_weather_calls.py \
+	--weather-webapp-uri "http://localhost:7071" \
+	--city "Seattle" \
+	--state "WA" \
+	--days 3
+```
+
+Expected result:
+
+- Exit code `0`
+- `weather webapp api/weather` returns HTTP `200`
+- `weather webapp api/mcp` returns HTTP `200`
+
+If either endpoint returns non-200, the script exits with code `1` and prints request/response details for troubleshooting.
+
 ## Azure Deployment (azd + Bicep)
 
 Prerequisites:
@@ -96,7 +133,6 @@ Set required azd environment values:
 azd env new production
 azd env set AZURE_LOCATION eastus
 azd env set AIHORDE_API_KEY "your_ai_horde_key"
-azd env set LATLNG_API_KEY "your_latlng_server_key"
 azd env set APP_SERVICE_SKU_NAME "F1"
 ```
 
