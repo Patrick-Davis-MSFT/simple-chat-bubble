@@ -306,7 +306,7 @@ These are set in azd env and consumed during provisioning/deploy.
 | Variable/Secret | Required | Default | Used by | Purpose |
 |---|---|---|---|---|
 | `AIHORDE_API_KEY` (secret) | Yes (for deploy) | None | azd env setup in CI | Secret API key passed into azd env before provision/deploy. |
-| `AIHORDE_MODEL` (variable) | No | `koboldcpp/LFM2.5-1.2B-Instruct` in workflow | azd env setup in CI | Optional model override in CI. |
+| `AIHORDE_MODEL` (variable) | No | `koboldcpp/Ministral-3-8B-Instruct-2512` in workflow | azd env setup in CI | Optional model override in CI. |
 | `AZURE_CLIENT_ID` (variable) | Yes (for deploy) | None | `azure/login` | OIDC client ID for Azure login. |
 | `AZURE_LOCATION` (variable) | No | `eastus` in workflow | azd env setup in CI | Region used when CI initializes azd env values. |
 | `AZURE_SUBSCRIPTION_ID` (variable) | Yes (for deploy) | None | `azure/login` | Azure subscription ID for deployment scope. |
