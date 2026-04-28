@@ -85,7 +85,7 @@ if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! "$PYTHON_BIN" -c "import uvicorn" >/dev/null 2>&1; then
+if ! "$PYTHON_BIN" -c "import uvicorn; import agent_framework; from agent_framework.foundry import FoundryChatClient" >/dev/null 2>&1; then
   echo "Installing backend dependencies..."
   "$PYTHON_BIN" -m pip install -r requirements.txt
 fi

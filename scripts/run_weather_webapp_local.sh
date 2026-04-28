@@ -15,6 +15,12 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v func >/dev/null 2>&1; then
+  echo "Error: Azure Functions Core Tools (func) is not installed or not on PATH." >&2
+  echo "This devcontainer should provide func automatically. Rebuild the container if needed." >&2
+  exit 1
+fi
+
 ensure_python_tooling() {
   local -a packages=()
 
@@ -58,12 +64,19 @@ if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! "$PYTHON_BIN" -c "import flask, gunicorn" >/dev/null 2>&1; then
-  echo "Installing weather webapp dependencies..."
+if ! "$PYTHON_BIN" -c "import azure.functions" >/dev/null 2>&1; then
+  echo "Installing weather function dependencies..."
   "$PYTHON_BIN" -m pip install -r requirements.txt
 fi
 
 export PATH="$(pwd)/.venv/bin:$PATH"
 
-echo "Starting Weather MCP Flask app on http://localhost:${WEATHER_WEBAPP_PORT:-7071}"
-exec "$PYTHON_BIN" -m gunicorn --bind "0.0.0.0:${WEATHER_WEBAPP_PORT:-7071}" function_app:app
+# Ensure local runtime defaults when not present in local settings.
+export FUNCTIONS_WORKER_RUNTIME="${FUNCTIONS_WORKER_RUNTIME:-python}"
+export AzureWebJobsScriptRoot="$(pwd)"
+
+echo "Starting Weather Function App on http://localhost:${WEATHER_WEBAPP_PORT:-7071}"
+
+exec func start \
+  --port "${WEATHER_WEBAPP_PORT:-7071}" \
+  --python

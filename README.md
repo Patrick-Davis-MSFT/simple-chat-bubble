@@ -4,19 +4,19 @@ A production-ready chat bubble widget with:
 
 - React + TypeScript frontend widget (Fluent UI v9)
 - Python 3.13 FastAPI backend
-- Python 3.13 Flask Weather MCP web app
+- Python 3.13 Weather MCP service deployed as an Azure Function App
 - Prompty-based agent definition (`Agent Plane Talk`)
 - AI Horde (`oai.aihorde.net`) OpenAI-compatible backend
-- Azure App Service deployment via `azd` + Bicep (chat app + weather web app)
+- Azure deployment via `azd` + Bicep (chat web app + weather Function App)
 - GitHub Actions CI/CD for quality checks and deployment
 
 ## Architecture
 
 - `frontend/`: Embeddable widget bundle (`chat-bubble.iife.js`) and CSS.
 - `backend/`: FastAPI API (`/api/chat`, `/api/chat/stream`) + static hosting for test page.
-- `function/`: Flask Weather MCP API (`/api/mcp`, `/api/weather`, `/api/heartbeat`).
+- `function/`: Weather MCP API (`/api/mcp`, `/api/weather`, `/api/heartbeat`) deployed via Azure Functions.
 - `backend/prompts/agent-plane-talk.prompty`: Default humorous aviation assistant profile.
-- `infra/`: Azure Bicep for App Service Plans, chat web app, and weather web app.
+- `infra/`: Azure Bicep for App Service Plans, chat web app, and weather Function App.
 - `azure.yaml`: Azure Developer CLI project definition.
 
 ## Local Development
@@ -36,10 +36,29 @@ export AIHORDE_BASE_URL="https://oai.aihorde.net/v1"
 export AIHORDE_MODEL="openai/gpt-oss-20b"
 ```
 
+To use a published Microsoft Foundry agent via Microsoft Agent Framework instead of AI Horde chat completions:
+
+```bash
+export CHAT_PROVIDER="foundry_agent"
+export FOUNDRY_PROJECT_ENDPOINT="https://<your-project>.services.ai.azure.com"
+export FOUNDRY_AGENT_NAME="my-agent"
+export FOUNDRY_AGENT_VERSION="1.0"  # optional (Prompt Agents)
+```
+
+When `CHAT_PROVIDER=foundry_agent`, the backend does not register or call local MCP tools. MCP and datasource access should be configured on the Foundry agent service.
+
+Optional auth variables for non-interactive environments (used by `DefaultAzureCredential`):
+
+```bash
+export AZURE_TENANT_ID="<tenant-guid>"
+export AZURE_CLIENT_ID="<app-or-managed-identity-client-id>"
+export AZURE_CLIENT_SECRET="<client-secret>"  # only when using a service principal secret
+```
+
 Weather MCP defaults (optional for local/dev):
 
 ```bash
-export AZURE_WEATHER_WEBAPP_URL="http://localhost:7071"
+export AZURE_WEATHER_FUNCTION_APP_URL="http://localhost:7071"
 export NOMINATIM_BASE_URL="https://nominatim.openstreetmap.org/search"
 export NOMINATIM_USER_AGENT="simple-chat-bubble-weather-mcp/1.0"
 export NWS_USER_AGENT="simple-chat-bubble-weather-mcp/1.0 (contact: admin@example.com)"
@@ -71,7 +90,7 @@ Open:
 
 - `http://localhost:8000/static/test-host.html`
 
-### 4. Run weather web app (Flask MCP)
+### 4. Run weather MCP locally
 
 ```bash
 ./scripts/run_weather_webapp_local.sh
@@ -108,7 +127,7 @@ The backend reads this file and injects it as the system prompt for every chat c
 
 Use `scripts/trace_weather_calls.py` to validate the weather path used by the chat flow. The script verifies both weather web app endpoints (`/api/weather` and `/api/mcp`) and returns non-zero on failure.
 
-Run against a deployed weather web app:
+Run against a deployed weather Function App:
 
 ```bash
 python3 ./scripts/trace_weather_calls.py \
@@ -184,11 +203,7 @@ The App Service startup command is configured for ASGI/FastAPI:
 gunicorn --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000 app.main:app
 ```
 
-The weather web app (MCP) startup command is:
-
-```text
-gunicorn --bind=0.0.0.0:8000 function_app:app
-```
+The weather MCP service is deployed as an Azure Function App (`host: function` in `azure.yaml`).
 
 ## CI/CD
 
@@ -260,7 +275,7 @@ This template defaults to App Service Plan `F1` and Python `3.13`. If you need a
 
 The table below lists environment variables used by this repo, whether they are required, and what they control.
 
-### Runtime (chat backend and weather web app)
+### Runtime (chat backend and weather MCP function app)
 
 | Variable | Required | Default | Used by | Purpose |
 |---|---|---|---|---|
@@ -268,9 +283,16 @@ The table below lists environment variables used by this repo, whether they are 
 | `AIHORDE_BASE_URL` | No | `https://oai.aihorde.net/v1` | backend | Base URL for OpenAI-compatible chat API endpoint. |
 | `AIHORDE_FALLBACK_MODEL` | No | unset | backend | Preferred fallback model when the requested model is unavailable (HTTP 406). |
 | `AIHORDE_HTTP_TIMEOUT_SECONDS` | No | `60` | backend | Timeout for direct AI Horde HTTP calls. |
-| `AIHORDE_MODEL` | No | Prompty/Bicep default (for example `koboldcpp/LFM2.5-1.2B-Instruct`) | backend | Model identifier sent to chat completions. |
-| `AZURE_WEATHER_WEBAPP_URL` | No | `http://localhost:7071` (Prompty default) | backend Prompty MCP config | Base URL for the weather MCP server (`/api/mcp` is appended in Prompty). |
+| `AIHORDE_MODEL` | No | Prompty/Bicep default (for example `koboldcpp/Ministral-3-8B-Instruct-2512`) | backend | Model identifier sent to chat completions. |
+| `AZURE_WEATHER_FUNCTION_APP_URL` | No | `http://localhost:7071` (Prompty default) | backend Prompty MCP config | Base URL for the weather MCP server (`/api/mcp` is appended in Prompty). |
+| `AZURE_CLIENT_ID` | Conditionally (when `CHAT_PROVIDER=foundry_agent` and using non-interactive identity) | None | backend | Optional Azure identity client id consumed by `DefaultAzureCredential` for Foundry agent auth. |
+| `AZURE_CLIENT_SECRET` | Conditionally (when `CHAT_PROVIDER=foundry_agent` and using service principal secret auth) | None | backend | Optional Azure identity client secret consumed by `DefaultAzureCredential` for Foundry agent auth. |
+| `AZURE_TENANT_ID` | Conditionally (when `CHAT_PROVIDER=foundry_agent` and using non-interactive identity) | None | backend | Optional Azure tenant id consumed by `DefaultAzureCredential` for Foundry agent auth. |
+| `CHAT_PROVIDER` | No | `openai_compatible` | backend | Chat provider selector: `openai_compatible` (default) or `foundry_agent`. |
 | `DISABLE_MODEL_TOOL_CALLING` | No | unset (`false`) | backend | Disables model-native tool calling when set to truthy (`1`, `true`, `yes`, `on`). |
+| `FOUNDRY_AGENT_NAME` | Conditionally (when `CHAT_PROVIDER=foundry_agent`) | None | backend | Published Foundry agent name to invoke. |
+| `FOUNDRY_AGENT_VERSION` | No | unset | backend | Optional Foundry Prompt Agent version. Hosted agents usually omit this. |
+| `FOUNDRY_PROJECT_ENDPOINT` | Conditionally (when `CHAT_PROVIDER=foundry_agent`) | None | backend | Foundry project endpoint used by Microsoft Agent Framework `FoundryAgent`. |
 | `MCP_HTTP_TIMEOUT_SECONDS` | No | `20` | backend | Timeout for MCP JSON-RPC HTTP calls (`tools/list`, `tools/call`). |
 | `NOMINATIM_BASE_URL` | No | `https://nominatim.openstreetmap.org/search` | function | Geocoding endpoint used to resolve city/state to coordinates. |
 | `NOMINATIM_USER_AGENT` | No | Falls back to `NWS_USER_AGENT`, then built-in default | function | User-Agent header for Nominatim requests. |
@@ -288,7 +310,7 @@ The table below lists environment variables used by this repo, whether they are 
 | `SKIP_FRONTEND_INSTALL` | No | `0` | `scripts/build_frontend.sh` | Skip `npm` install step when set to `1`. |
 | `UI_PORT` | No | `8000` | `scripts/run_ui_local.sh` | Port for local FastAPI UI/chat backend. |
 | `UI_SKIP_FRONTEND_BUILD` | No | `0` | `scripts/run_ui_local.sh` | Skip frontend build/copy when set to `1`. |
-| `WEATHER_WEBAPP_PORT` | No | `7071` | `scripts/run_weather_webapp_local.sh` | Port for local weather web app. |
+| `WEATHER_WEBAPP_PORT` | No | `7071` | `scripts/run_weather_webapp_local.sh` | Port for local weather MCP service. |
 
 ### azd / Infrastructure Inputs
 
@@ -297,7 +319,7 @@ These are set in azd env and consumed during provisioning/deploy.
 | Variable | Required | Default | Used by | Purpose |
 |---|---|---|---|---|
 | `AIHORDE_API_KEY` | Yes | None | `infra/main.parameters.json`, CI | Injected into chat web app settings for runtime model access. |
-| `AIHORDE_MODEL` | No | `koboldcpp/LFM2.5-1.2B-Instruct` | Bicep output/app setting, CI | Model name provisioned into app settings. |
+| `AIHORDE_MODEL` | No | `koboldcpp/Ministral-3-8B-Instruct-2512` | Bicep output/app setting, CI | Model name provisioned into app settings. |
 | `APP_SERVICE_SKU_NAME` | Yes | None | `infra/main.parameters.json` | App Service plan SKU (`F1`, `B1`, `B3`). |
 | `AZURE_LOCATION` | Yes | None | `infra/main.parameters.json`, CI | Azure region for resources (for example `eastus`). |
 

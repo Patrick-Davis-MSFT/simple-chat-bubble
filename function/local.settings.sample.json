@@ -1,6 +1,12 @@
 {
   "IsEncrypted": false,
   "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AZURE_COMMUNICATION_EMAIL_CONNECTION_STRING": "endpoint=https://<resource>.communication.azure.com/;accesskey=<key>",
+    "AZURE_COMMUNICATION_EMAIL_SENDER_ADDRESS": "DoNotReply@<domain>.azurecomm.net",
+    "AZURE_COMMUNICATION_EMAIL_DOMAIN": "<domain>.azurecomm.net",
+    "AZURE_COMMUNICATION_EMAIL_SERVICE_NAME": "<email-service-name>",
     "NOMINATIM_BASE_URL": "https://nominatim.openstreetmap.org/search",
     "NOMINATIM_USER_AGENT": "simple-chat-bubble-weather-mcp/1.0",
     "NWS_USER_AGENT": "simple-chat-bubble-weather-mcp/1.0 (contact: you@example.com)"

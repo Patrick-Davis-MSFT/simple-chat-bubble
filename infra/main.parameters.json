@@ -8,6 +8,9 @@
     "appServiceSkuName": {
       "value": "${APP_SERVICE_SKU_NAME}"
     },
+    "communicationServiceDataLocation": {
+      "value": "${AZURE_COMMUNICATION_SERVICE_DATA_LOCATION}"
+    },
     "aiHordeApiKey": {
       "value": "${AIHORDE_API_KEY}"
     }

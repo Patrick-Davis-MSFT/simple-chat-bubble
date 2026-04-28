@@ -11,21 +11,24 @@ system: |
   - Keep the answer accurate first, then add tasteful humor.
   - If you are uncertain, say you are requesting a holding pattern and ask a clarifying question.
   - For weather questions, always call the get_weather_forecast tool before answering. Never invent weather data.
+  - For user requests to send email, call the send_email tool. Do not claim email is unavailable.
+  - If the user provides a recipient and message intent, send the email immediately using send_email. Ask follow-up only if required fields are missing.
+  - When calling send_email, you must write a clear subject and a helpful body (plain_text or html) based on the user's request.
+  - Use send_email arguments in this shape: to=[{address: 'recipient@example.com'}], subject='...', plain_text='...'.
 
   Safety profile:
   - Do not provide illegal, dangerous, or disallowed content.
   - For harmful requests, refuse briefly and offer a safe alternative.
 
 model:
-  id: ${env:AIHORDE_MODEL:koboldcpp/Ministral-3-8B-Instruct-2512}
-  provider: openai
+  id: gpt-4.1-mini
+  provider: foundry
   apiType: chat
   connection:
-    kind: key
-    endpoint: ${env:AIHORDE_BASE_URL:https://oai.aihorde.net/v1}
-    apiKey: ${env:AIHORDE_API_KEY:0000000000}
+    kind: entra_id
+    endpoint: https://aihub-perm-foundry.services.ai.azure.com/api/projects/aiproj-perm-foundry
   options:
-    temperature: 0.7
+    temperature: 0.2
     maxOutputTokens: 700
     additionalProperties:
       stream: false
@@ -42,6 +45,10 @@ fewShots:
     content: "What is a crosswind?"
   - role: assistant
     content: "Agent Plane Talk reports: a crosswind blows across your runway heading, so pilots crab or slip to stay lined up on final approach."
+  - role: user
+    content: "Please email sam@example.com three tips for staying calm during turbulence."
+  - role: assistant
+    content: "Agent Plane Talk has sent the email with a clear subject and practical tips for staying calm during turbulence."
 
 tools:
   - name: get_current_utc_time
@@ -63,16 +70,17 @@ tools:
   - name: weather_mcp
     kind: mcp
     serverName: weather-mcp-function
-    serverDescription: Weather forecast lookups via deployed Azure Function MCP server.
+    serverDescription: Weather forecast lookups via deployed Azure Function MCP server. This tool may also send emails via the same MCP server.
     connection:
       kind: remote
       name: weather-mcp-endpoint
-      endpoint: ${env:AZURE_WEATHER_WEBAPP_URL:http://localhost:7071}/api/mcp
+      endpoint: ${env:AZURE_WEATHER_FUNCTION_APP_URL:https://chatbubble-t4dv6rqnwlemu-func.azurewebsites.net}/api/mcp
     approvalMode:
       kind: never
     allowedTools:
       - get_heartbeat
       - get_weather_forecast
+      - send_email
 input:
   type: chat
 output:
@@ -87,6 +95,10 @@ Operating profile:
 - Keep the answer accurate first, then add tasteful humor.
 - If you are uncertain, say you are requesting a holding pattern and ask a clarifying question.
 - For weather questions, always call the get_weather_forecast tool before answering. Never invent weather data.
+- For user requests to send email, call the send_email tool. Do not claim email is unavailable.
+- If the user provides a recipient and message intent, send the email immediately using send_email. Ask follow-up only if required fields are missing.
+- When calling send_email, you must write a clear subject and a helpful body (plain_text or html) based on the user's request.
+- Use send_email arguments in this shape: to=[{address: 'recipient@example.com'}], subject='...', plain_text='...'.
 
 Safety profile:
 - Do not provide illegal, dangerous, or disallowed content.
